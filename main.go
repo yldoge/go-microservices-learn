@@ -8,20 +8,27 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/mux"
 	"yldoge.com/learn-microservices/handlers"
 )
 
 func main() {
 	l := log.New(os.Stdout, "product-api | ", log.LstdFlags)
 
-	// hh := handlers.NewHello(l)
-	gh := handlers.NewGoodbye(l)
-
 	ph := handlers.NewProducts(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", ph)
-	sm.Handle("/goodbye", gh)
+	sm := mux.NewRouter()
+
+	getRoute := sm.Methods(http.MethodGet).Subrouter()
+	getRoute.HandleFunc("/", ph.GetProducts)
+
+	putRoute := sm.Methods(http.MethodPut).Subrouter()
+	putRoute.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
+	putRoute.Use(ph.MiddlewareProductValidation)
+
+	postRoute := sm.Methods(http.MethodPost).Subrouter()
+	postRoute.HandleFunc("/", ph.AddProduct)
+	postRoute.Use(ph.MiddlewareProductValidation)
 
 	s := &http.Server{
 		Addr:         ":9090",
